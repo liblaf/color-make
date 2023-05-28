@@ -20,8 +20,8 @@ clean:
 	$(RM) --recursive $(GIF)
 	$(RM) --recursive $(TAPE)
 
-deploy: $(ASSETS_LIST)
-	bash $(TEMPLATE)/scripts/deploy-gh-pages.sh $(ASSETS) assets
+deploy: $(TEMPLATE)/scripts/deploy-gh-pages.sh $(ASSETS_LIST)
+	bash $< $(ASSETS) assets
 
 echo:
 	echo "Hello, world!"
