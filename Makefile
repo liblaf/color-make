@@ -1,40 +1,44 @@
-BIN  := $(CURDIR)/bin
-CMD  := $(CURDIR)/cmd
-DEMO := $(CURDIR)/demo
-DIST := $(CURDIR)/dist
+NAME := color-make
 
-GOARCH ?= $(shell go env GOARCH)
-GOOS   ?= $(shell go env GOOS)
-GOBIN  := $(HOME)/.local/bin
-GO     := env GOARCH=$(GOARCH) GOBIN=$(GOBIN) GOOS=$(GOOS) go
-GOEXE  != $(GO) env GOEXE
+BUILD := $(CURDIR)/build
+DIST  := $(CURDIR)/dist
 
-all: $(BIN)/color-make
+SYSTEM      != python -c 'import platform; print(platform.system().lower())'
+MACHINE     != python -c 'import platform; print(platform.machine().lower())'
+EXE         := $(if $(filter windows,$(SYSTEM)),.exe,)
+DIST_TARGET := $(DIST)/$(NAME)-$(SYSTEM)-$(MACHINE)$(EXE)
+
+all:
 
 clean:
-	@ $(RM) --recursive --verbose $(BIN)
+	@ $(RM) --recursive --verbose $(BUILD)
 	@ $(RM) --recursive --verbose $(DIST)
 
-.PHONY: dist
-dist: $(DIST)/color-make-$(GOOS)-$(GOARCH)$(GOEXE)
+dist: $(DIST_TARGET)
 
-install: $(GOBIN)/color-make
+install:
+	pipx install --force $(CURDIR)
 
-pretty:
-	$(GO) fmt ./...
-	$(GO) mod tidy
-	$(GO) vet ./...
+pretty: black prettier
+
+setup:
+	conda install --yes libpython-static
+	poetry install
+
+#####################
+# Auxiliary Targets #
+#####################
+
+black:
+	isort --profile=black $(CURDIR)
+	black $(CURDIR)
+
+prettier:
 	prettier --write $(CURDIR)
 
-release: $(BIN)/color-make-$(GOOS)-$(GOARCH)$(GOEXE)
-
-ALWAYS:
-
-$(BIN)/color-make: $(CMD)/color-make ALWAYS
-	$(GO) build -o $@ $<
-
-$(DIST)/color-make-$(GOOS)-$(GOARCH)$(GOEXE): $(CMD)/color-make ALWAYS
-	$(GO) build -o $@ $<
-
-$(GOBIN)/color-make: $(BIN)/color-make
-	@ install -D --mode="u=rwx,go=rx" --no-target-directory --verbose $< $@
+$(DIST_TARGET): $(CURDIR)/main.py
+ifneq ($(SYSTEM),windows)
+	python -m nuitka --standalone --onefile --output-filename=$(@F) --output-dir=$(@D) --remove-output $<
+else
+	pyinstaller --distpath=$(DIST) --workpath=$(BUILD) --onefile --name=$(NAME)-$(SYSTEM)-$(MACHINE) $<
+endif

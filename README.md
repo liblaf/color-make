@@ -17,3 +17,11 @@
 ### Info
 
 ![info](https://github.com/liblaf/color-make/raw/assets/info.png)
+
+## Shell Completion
+
+### Zsh
+
+```zsh
+compdef color-make=make
+```

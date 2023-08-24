@@ -1,0 +1,4 @@
+markdown-it-py==3.0.0 ; python_version >= "3.11" and python_version < "3.12"
+mdurl==0.1.2 ; python_version >= "3.11" and python_version < "3.12"
+pygments==2.16.1 ; python_version >= "3.11" and python_version < "3.12"
+rich==13.5.2 ; python_version >= "3.11" and python_version < "3.12"

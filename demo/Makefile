@@ -1,7 +1,6 @@
-MAKEFLAGS += --jobs
+MAKEFLAGS += --jobs --output-sync
 
 ASSETS   := $(CURDIR)/assets
-FRAMES   := $(CURDIR)/frames
 GIF      := $(CURDIR)/gif
 ROOT     != git rev-parse --show-toplevel
 TAPE     := $(CURDIR)/tape
@@ -15,13 +14,16 @@ ASSETS_LIST += $(ASSETS)/info.png
 all: $(ASSETS_LIST)
 
 clean:
-	$(RM) --recursive $(ASSETS)
-	$(RM) --recursive $(FRAMES)
-	$(RM) --recursive $(GIF)
-	$(RM) --recursive $(TAPE)
+	@ $(RM) --recursive --verbose $(ASSETS)
+	@ $(RM) --recursive --verbose $(GIF)
+	@ $(RM) --recursive --verbose $(TAPE)
 
 deploy: $(TEMPLATE)/scripts/deploy-gh-pages.sh $(ASSETS_LIST)
 	bash $< $(ASSETS) assets
+
+#####################
+# Auxiliary Targets #
+#####################
 
 echo:
 	echo "Hello, world!"
@@ -35,18 +37,14 @@ warning:
 info:
 	$(info INFO MESSAGE)
 
-$(GIF) $(TAPE):
+$(ASSETS) $(GIF) $(TAPE):
 	@ mkdir --parents --verbose $@
 
-$(ASSETS)/%.png: $(FRAMES)/%/frame-100.png
-	@ install -D --mode="u=rw,go=r" --no-target-directory --verbose $< $@
+$(ASSETS)/%.png: $(GIF)/%.gif | $(ASSETS)
+	magick convert $< -coalesce -background transparent -flatten $@
 
-$(FRAMES)/%/frame-100.png: $(GIF)/%.gif
-	@ mkdir --parents --verbose $(@D)
-	magick convert -coalesce $< $(@D)/frame-%03d.png
-
-$(GIF)/%.gif: $(TAPE)/%.tape
-	vhs $< --output $@
+$(GIF)/%.gif: $(TAPE)/%.tape | $(GIF)
+	MAKELEVEL=0 vhs $< --output $@
 
 $(TAPE)/%.tape: $(CURDIR)/template.tape | $(TAPE)
-	sed --expression 's/TARGET/$*/g' $< > $@
+	sed --expression="s/TARGET/$*/g" $< > $@

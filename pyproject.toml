@@ -1,0 +1,26 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
+
+[tool.isort]
+profile = "black"
+
+[tool.poetry]
+authors = ["liblaf <i@liblaf.me>"]
+description = ""
+license = "MIT"
+name = "color-make"
+packages = [{ include = "color_make" }]
+readme = "README.md"
+version = "1.0.0"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.12"
+rich = "^13.5.2"
+
+[tool.poetry.scripts]
+color-make = "color_make.main:main"
+
+[tool.poetry.group.dev.dependencies]
+nuitka = "^1.7.10"
+pyinstaller = "^5.13.0"

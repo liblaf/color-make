@@ -9,36 +9,69 @@ permissions:
   contents: write
   pull-requests: write
 
+env:
+  PYTHON_VERSION: 3.x
+
 jobs:
-  build:
-    name: Build Executable
+  build-pkg:
+    name: Build Package
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Setup Go
-        uses: actions/setup-go@v4
+      - name: Install Poetry
+        run: pipx install poetry
+      - id: python
+        name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          go-version-file: go.mod
-      - name: Build Executable
-        run: make --jobs dist
-        env:
-          GOOS: ${{ matrix.os }}
-          GOARCH: ${{ matrix.arch }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: poetry
+      - name: Install Dependencies
+        run: poetry install
+      - name: Build Package
+        run: poetry build
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.os }}-${{ matrix.arch }}
+          name: package
+          path: dist/*
+
+  build-exe:
+    name: Build Executable
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install GNU Make
+        if: runner.os == 'macOS'
+        # https://formulae.brew.sh/formula/make
+        run: |-
+          brew install make
+          echo "$(brew --prefix)/opt/make/libexec/gnubin" >> ${GITHUB_PATH}
+      - name: Install Poetry
+        run: pipx install poetry
+      - id: python
+        name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: poetry
+      - name: Install Dependencies
+        run: poetry install
+      - name: Build Executable
+        run: poetry run make dist
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ runner.os }}-${{ runner.arch }}
           path: dist/*
     strategy:
       matrix:
         os:
-          - darwin
-          - linux
-          - windows
-        arch:
-          - amd64
-          - arm64
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
     continue-on-error: true
 
   release:
@@ -52,12 +85,13 @@ jobs:
         name: Create GitHub Release
         uses: google-github-actions/release-please-action@v3
         with:
-          release-type: go
+          release-type: python
 
   upload:
     name: Upload Release Assets
     needs:
-      - build
+      - build-exe
+      - build-pkg
       - release
     if: needs.release.outputs.releases-created == 'true'
     runs-on: ubuntu-latest
@@ -71,3 +105,24 @@ jobs:
         with:
           tag_name: ${{ needs.release.outputs.tag-name }}
           files: artifacts/**/*
+
+  publish:
+    name: Publish to PyPI
+    needs:
+      - release
+    if: needs.release.outputs.releases-created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: poetry
+      - name: Install Dependencies
+        run: poetry install
+      - name: Publish to PyPI
+        run: poetry publish --username="${{ secrets.PYPI_USERNAME }}" --password="${{ secrets.PYPI_PASSWORD }}" --build
