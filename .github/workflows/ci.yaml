@@ -101,7 +101,7 @@ jobs:
         with:
           path: artifacts
       - name: Upload Release Assets
-        uses: softprops/action-gh-release@v0.1.15
+        uses: softprops/action-gh-release@v2.2.1
         with:
           tag_name: ${{ needs.release.outputs.tag-name }}
           files: artifacts/**/*
