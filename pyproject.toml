@@ -22,5 +22,5 @@ rich = "^13.5.2"
 color-make = "color_make.main:main"
 
 [tool.poetry.group.dev.dependencies]
-nuitka = "^1.7.10"
+nuitka = ">=1.7.10,<3.0.0"
 pyinstaller = "^5.13.0"
